@@ -1,0 +1,50 @@
+name: CV Pipeline (Web + PDF)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: 
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-cv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Sync CV for GitHub Pages
+      - name: Sync CV markdown to docs
+        run: |
+          mkdir -p docs/_includes
+          cp cv.md docs/_includes/cv.md
+
+      # Generate PDF from Markdown
+      - name: Install Pandoc & LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex
+
+      - name: Generate CV PDF
+        run: |
+          mkdir -p pdf
+          pandoc cv.md \
+            -o pdf/Jesus_Silva_Utrera_CV.pdf \
+            --pdf-engine=xelatex \
+            -V geometry:margin=1in
+
+      # Add changes
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/_includes/cv.md pdf/Jesus_Silva_Utrera_CV.pdf
+          git diff --cached --quiet || git commit -m "Update CV (web + PDF)"
+          git push
